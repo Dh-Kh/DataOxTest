@@ -4,10 +4,13 @@ services:
     image: selenium/standalone-chrome
     ports: 
       - "4444:4444"
-  
-  selenium_parser:
+    shm_size: '512M'  
+    tmpfs:
+      - /dev/shm
+        
+  django:
     build: ./backend
-    container_name: selenium_parser
+    container_name: django
     command: >
         bash -c "
           python manage.py makemigrations &&
@@ -29,7 +32,7 @@ services:
     volumes:
       - ./backend:/backend
     depends_on:
-      - selenium_parser
+      - django
       - redis
 
   celery-beat:
@@ -38,7 +41,7 @@ services:
     volumes:
       - ./backend:/backend
     depends_on:
-      - selenium_parser
+      - django
       - redis
   
   pgdb:

@@ -3,14 +3,14 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
+#from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
-from webdriver_manager.chrome import ChromeDriverManager
-from datapreprocessing import preprocessing
 
+#from webdriver_manager.chrome import ChromeDriverManager
+from .datapreprocessing import preprocessing
+from .models import Car
 
 def retrieve_car_links(url):
     response = requests.get(url)
@@ -22,10 +22,14 @@ def retrieve_car_links(url):
         return []
 
 def retrieve_car_page(url):
-    options = Options()
+    options = webdriver.ChromeOptions()
     options.add_argument('--headless')
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
+    options.add_argument('--no-sandbox')
+    #need to get url from selenium-google container
+    driver = webdriver.Remote(
+        command_executor='http://192.168.0.4:4444',
+        options=options
+        )
     try:
         driver.get(url)
         title = driver.find_element(By.CSS_SELECTOR, '#heading-cars > div > h1').text
@@ -100,6 +104,22 @@ def constructor():
         car_df = retrieve_car_page(cars_link)
         merged_df = pd.concat([merged_df, car_df], ignore_index=True)
     merged_df.to_csv("car_data.csv", index=False)
-    #preprocessing()
+    preprocessing()
     
-constructor()
+def add_to_database():
+    df = pd.read_csv("car_data.csv")
+    for index, row in df.iterrows():
+        Car.objects.create(
+            url=row['url'],
+            title=row['title'],
+            price_usd=row['price_usd'],
+            odometer=row['odometer'],
+            username=row['username'],
+            phone_number=row['phone_number'],
+            image_url=row['image_url'],
+            images_count=row['images_count'],
+            car_number=row['car_number'],
+            car_vin=row['car_vin'],
+            )
+
+    

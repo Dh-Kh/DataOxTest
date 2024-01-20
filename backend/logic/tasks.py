@@ -1,20 +1,23 @@
-from celery import Celery
+from celery import shared_task
 from celery.utils.log import get_task_logger
 import os
 from datetime import datetime
+from .selenium_task import constructor, add_to_database
 import subprocess
-
-celery = Celery("tasks")
-celery.config_from_object("celeryconfig")
 
 logger = get_task_logger(__name__)
 
-@celery.task
+@shared_task
 def scrapping_task():
+    logger.info("Task started")
+    constructor()
+    logger.info("First step completed")
+    add_to_database()
     logger.info("Scrapping task executed")
 
-@celery.task
+@shared_task
 def dump_task():
+    logger.info("Task two started")
     DB_USER = 'postgres'
     DB_PASS = '12345'
     DB_NAME = 'postgres'
