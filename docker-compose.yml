@@ -1,0 +1,60 @@
+version: '3.8'
+services:
+  chromedriver:
+    image: selenium/standalone-chrome
+    ports: 
+      - "4444:4444"
+  
+  selenium_parser:
+    build: ./backend
+    container_name: selenium_parser
+    command: >
+        bash -c "
+          python manage.py makemigrations &&
+          python manage.py migrate &&
+          python manage.py runserver 0.0.0.0:8000
+        "
+    volumes:
+      - ./backend:/backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - chromedriver
+      - redis
+      - pgdb
+
+  celery:
+    build: ./backend
+    command: celery -A core worker -l info
+    volumes:
+      - ./backend:/backend
+    depends_on:
+      - selenium_parser
+      - redis
+
+  celery-beat:
+    build: ./backend
+    command: celery -A core beat -l info
+    volumes:
+      - ./backend:/backend
+    depends_on:
+      - selenium_parser
+      - redis
+  
+  pgdb:
+    image: postgres
+    container_name: pgdb
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345
+    volumes:
+      - pgdata:/var/lib/postgresql/data/
+
+  redis:
+    image: redislabs/redismod
+    ports:
+      - '6379:6379'
+
+volumes:
+  pgdata:
